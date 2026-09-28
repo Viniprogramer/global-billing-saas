@@ -1,0 +1,124 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+enum LeadStage {
+  LEAD
+  QUALIFIED
+  PROPOSAL
+  WON
+  LOST
+}
+
+enum ActivityType {
+  CUSTOMER_CREATED
+  CUSTOMER_UPDATED
+  CUSTOMER_DELETED
+  LEAD_CREATED
+  LEAD_STAGE_CHANGED
+  LEAD_DELETED
+  USER_REGISTERED
+}
+
+model Tenant {
+  id            String         @id @default(uuid())
+  name          String
+  slug          String         @unique
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  users         User[]
+  customers     Customer[]
+  leads         Lead[]
+  activities    Activity[]
+  subscriptions Subscription[]
+}
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  name         String
+  passwordHash String
+  role         Role       @default(MEMBER)
+  tenantId     String
+  tenant       Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customers    Customer[]
+  leads        Lead[]
+  activities   Activity[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Customer {
+  id          String     @id @default(uuid())
+  name        String
+  email       String
+  company     String
+  phone       String?
+  notes       String?
+  tenantId    String
+  ownerId     String
+  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner       User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  leads       Lead[]
+  activities  Activity[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, email])
+}
+
+model Lead {
+  id          String     @id @default(uuid())
+  title       String
+  value       Float
+  stage       LeadStage  @default(LEAD)
+  tenantId    String
+  customerId  String
+  ownerId     String
+  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer    Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  owner       User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  activities  Activity[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([tenantId, stage])
+  @@index([tenantId, createdAt])
+}
+
+model Activity {
+  id          String       @id @default(uuid())
+  type        ActivityType
+  message     String
+  tenantId    String
+  userId      String
+  customerId  String?
+  leadId      String?
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customer    Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  createdAt   DateTime     @default(now())
+
+  @@index([tenantId, createdAt])
+}
+
+model Subscription {
+  id                 String   @id @default(uuid())
+  tenantId           String   @unique
+  tenant             Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  stripeCustomerId   String   @unique
+  stripePriceId      String
+  status             String
+  currentPeriodEnd   DateTime
+}
