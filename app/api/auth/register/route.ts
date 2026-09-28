@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/src/lib/db';
 import { hashPassword, signAuthToken } from '@/src/lib/auth';
+import type { Prisma } from '@prisma/client';
 
 const registerSchema = z.object({
   name: z.string().min(2),
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
 
     const passwordHash = await hashPassword(password);
 
-    const result = await db.$transaction(async (tx) => {
+    const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
       const tenant = await tx.tenant.create({
         data: {
           name: tenantName,

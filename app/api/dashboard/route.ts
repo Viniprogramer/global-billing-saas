@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     db.activity.findMany({ where: { tenantId: auth.tenantId }, orderBy: { createdAt: 'desc' }, take: 6 }),
   ]);
 
-  const revenue = wonLeads.reduce((sum, lead) => sum + lead.value, 0);
+  const revenue = wonLeads.reduce((sum: number, lead: { value: number }) => sum + lead.value, 0);
 
   return NextResponse.json(
     {
